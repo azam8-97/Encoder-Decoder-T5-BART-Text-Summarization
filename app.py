@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# CUSTOM CSS (FIXED - Added color property)
+# CUSTOM CSS
 # =============================================================================
 st.markdown("""
 <style>
@@ -174,12 +174,6 @@ with st.sidebar:
     """)
 
 # =============================================================================
-# INITIALIZE SESSION STATE FOR EXAMPLES (FIXED)
-# =============================================================================
-if 'example_text' not in st.session_state:
-    st.session_state.example_text = ""
-
-# =============================================================================
 # MAIN INTERFACE
 # =============================================================================
 st.markdown("---")
@@ -195,31 +189,35 @@ examples = {
     "Business Article": """The global economy is experiencing significant transformation driven by technological innovation and changing consumer behaviors. Companies are rapidly adapting their business models to meet evolving market demands and remain competitive in an increasingly digital landscape. E-commerce platforms continue to gain market share as consumers embrace online shopping for convenience and variety. Traditional retailers are investing heavily in omnichannel strategies, integrating physical and digital experiences to serve customers effectively. Supply chain disruptions have prompted businesses to diversify their supplier networks and invest in resilient logistics systems. Sustainability has become a central concern, with companies implementing environmentally friendly practices to meet consumer expectations and regulatory requirements. Financial markets remain volatile as investors navigate uncertainty around interest rates, inflation, and geopolitical tensions. Business leaders emphasize the importance of agility and innovation in responding to rapid market changes."""
 }
 
-# Example selector
+# Example selector (FIXED - simpler approach)
 with st.expander("💡 Try an example text"):
     example_choice = st.selectbox(
         "Select an example:",
-        ["-- Choose an example --", "Technology News", "Health & Fitness", "Sports News", "Business Article"]
+        ["-- Choose an example --", "Technology News", "Health & Fitness", "Sports News", "Business Article"],
+        key="example_selector"
     )
     
     if example_choice != "-- Choose an example --":
-        if st.button("📋 Use this example", key="use_example"):
-            st.session_state.example_text = examples[example_choice]
+        if st.button("📋 Use this example"):
+            # Store in session state with a flag to trigger update
+            st.session_state.selected_example = examples[example_choice]
             st.rerun()
 
-# Input text area (FIXED - uses session state)
+# Check if there's a selected example and use it
+default_text = st.session_state.get('selected_example', '')
+
+# Input text area (FIXED - removed conflicting key, using default value)
 text = st.text_area(
     "📄 Enter text to summarize:",
-    value=st.session_state.example_text,  # Use session state value
+    value=default_text,
     height=250,
     placeholder="Paste your article or text here...\n\nThe model works best with news articles, blog posts, and informative content.\n\nMinimum 10 words recommended.",
-    help="Enter or paste the text you want to summarize",
-    key="text_input"
+    help="Enter or paste the text you want to summarize"
 )
 
-# Clear example after use
-if text != st.session_state.example_text and st.session_state.example_text != "":
-    st.session_state.example_text = ""
+# Clear the selected example after it's been loaded
+if default_text and 'selected_example' in st.session_state:
+    del st.session_state.selected_example
 
 # Generate button
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -269,7 +267,7 @@ if generate_button:
                 
                 # Check if summary is empty
                 if summary and len(summary.strip()) > 0:
-                    # Summary in styled box (FIXED - now has color)
+                    # Summary in styled box
                     st.markdown(
                         f'<div class="summary-box">{summary}</div>',
                         unsafe_allow_html=True
