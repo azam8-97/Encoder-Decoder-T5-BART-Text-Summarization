@@ -1,3 +1,10 @@
+# =============================================================================
+# T5-SMALL SUMMARIZER - STREAMLIT DEPLOYMENT
+# =============================================================================
+# Trained with QLoRA on CNN/DailyMail Dataset
+# Deployment: Streamlit Cloud (CPU-compatible)
+# =============================================================================
+
 import streamlit as st
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from peft import PeftModel
@@ -178,7 +185,9 @@ with st.sidebar:
 # =============================================================================
 st.markdown("---")
 
-# Example texts dictionary
+if 'text_input' not in st.session_state:
+    st.session_state.text_input = ""
+
 examples = {
     "Technology News": """Artificial intelligence continues to revolutionize industries worldwide with unprecedented speed. Recent developments in large language models have demonstrated remarkable capabilities in natural language understanding, code generation, and creative tasks. Major technology companies are investing billions of dollars in AI research and development, racing to create more powerful and efficient systems. These AI systems are being deployed across healthcare, education, finance, and transportation sectors. However, experts emphasize the critical importance of responsible AI development, including addressing algorithmic bias, ensuring transparency, and maintaining robust ethical guidelines. Governments and regulatory bodies are working to establish comprehensive frameworks for AI governance. The technology promises to enhance human capabilities while raising important questions about privacy, employment, and societal impact.""",
     
@@ -189,7 +198,6 @@ examples = {
     "Business Article": """The global economy is experiencing significant transformation driven by technological innovation and changing consumer behaviors. Companies are rapidly adapting their business models to meet evolving market demands and remain competitive in an increasingly digital landscape. E-commerce platforms continue to gain market share as consumers embrace online shopping for convenience and variety. Traditional retailers are investing heavily in omnichannel strategies, integrating physical and digital experiences to serve customers effectively. Supply chain disruptions have prompted businesses to diversify their supplier networks and invest in resilient logistics systems. Sustainability has become a central concern, with companies implementing environmentally friendly practices to meet consumer expectations and regulatory requirements. Financial markets remain volatile as investors navigate uncertainty around interest rates, inflation, and geopolitical tensions. Business leaders emphasize the importance of agility and innovation in responding to rapid market changes."""
 }
 
-# Example selector (FIXED - simpler approach)
 with st.expander("💡 Try an example text"):
     example_choice = st.selectbox(
         "Select an example:",
@@ -199,27 +207,17 @@ with st.expander("💡 Try an example text"):
     
     if example_choice != "-- Choose an example --":
         if st.button("📋 Use this example"):
-            # Store in session state with a flag to trigger update
-            st.session_state.selected_example = examples[example_choice]
-            st.rerun()
+            st.session_state.text_input = examples[example_choice]
+            st.rerun() 
 
-# Check if there's a selected example and use it
-default_text = st.session_state.get('selected_example', '')
-
-# Input text area (FIXED - removed conflicting key, using default value)
-text = st.text_area(
+text_input = st.text_area(
     "📄 Enter text to summarize:",
-    value=default_text,
+    key="text_input",
     height=250,
     placeholder="Paste your article or text here...\n\nThe model works best with news articles, blog posts, and informative content.\n\nMinimum 10 words recommended.",
     help="Enter or paste the text you want to summarize"
 )
 
-# Clear the selected example after it's been loaded
-if default_text and 'selected_example' in st.session_state:
-    del st.session_state.selected_example
-
-# Generate button
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     generate_button = st.button("🚀 Generate Summary", use_container_width=True, type="primary")
@@ -228,17 +226,17 @@ with col2:
 # SUMMARY GENERATION
 # =============================================================================
 if generate_button:
-    if not text or len(text.strip()) == 0:
+    text_to_process = st.session_state.text_input
+
+    if not text_to_process or len(text_to_process.strip()) == 0:
         st.warning("⚠️ Please enter some text to summarize.")
-    elif len(text.split()) < 10:
+    elif len(text_to_process.split()) < 10:
         st.warning("⚠️ Text is too short. Please enter at least 10 words for better results.")
     else:
         with st.spinner("🤖 Generating summary... This may take 10-30 seconds."):
             try:
-                # Prepare input
-                input_text = f"summarize: {text}"
+                input_text = f"summarize: {text_to_process}"
                 
-                # Tokenize input
                 inputs = tokenizer(
                     input_text,
                     return_tensors="pt",
@@ -246,7 +244,6 @@ if generate_button:
                     truncation=True
                 )
                 
-                # Generate summary
                 with torch.no_grad():
                     outputs = model.generate(
                         **inputs,
@@ -258,16 +255,12 @@ if generate_button:
                         early_stopping=True,
                     )
                 
-                # Decode summary
                 summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
                 
-                # Display results
                 st.markdown("---")
                 st.markdown("### 📄 Generated Summary")
                 
-                # Check if summary is empty
                 if summary and len(summary.strip()) > 0:
-                    # Summary in styled box
                     st.markdown(
                         f'<div class="summary-box">{summary}</div>',
                         unsafe_allow_html=True
@@ -275,11 +268,10 @@ if generate_button:
                 else:
                     st.error("⚠️ Model generated an empty summary. Please try again with different text.")
                 
-                # Statistics
                 st.markdown("### 📊 Statistics")
                 col1, col2, col3 = st.columns(3)
                 
-                input_words = len(text.split())
+                input_words = len(text_to_process.split())
                 summary_words = len(summary.split())
                 compression_ratio = round((1 - summary_words / input_words) * 100, 1) if input_words > 0 else 0
                 
@@ -304,7 +296,6 @@ if generate_button:
                         help="Percentage of text reduction"
                     )
                 
-                # Download button
                 st.markdown("---")
                 col1, col2, col3 = st.columns([1, 1, 1])
                 with col2:
