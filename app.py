@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# CUSTOM CSS
+# CUSTOM CSS (FIXED - Added color property)
 # =============================================================================
 st.markdown("""
 <style>
@@ -51,6 +51,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 5px solid #1f77b4;
         margin-top: 1rem;
+        color: #1a1a1a;
         font-size: 1.1rem;
         line-height: 1.6;
     }
@@ -76,24 +77,18 @@ st.markdown('<div class="sub-header">Fine-tuned with QLoRA on CNN/DailyMail Data
 def load_model():
     """Load the QLoRA fine-tuned T5-small model"""
     try:
-        # Updated path to Model_Files folder
         adapter_path = "./Model_Files"
         
-        # Check if folder exists
         if not os.path.exists(adapter_path):
             return None, None, f"Model folder not found at '{adapter_path}'"
         
-        # Load base model
         base_model = AutoModelForSeq2SeqLM.from_pretrained(
             "t5-small",
             torch_dtype=torch.float32,
             low_cpu_mem_usage=True,
         )
         
-        # Load LoRA adapters
         model = PeftModel.from_pretrained(base_model, adapter_path)
-        
-        # Load tokenizer
         tokenizer = AutoTokenizer.from_pretrained(adapter_path)
         
         return model, tokenizer, None
@@ -111,19 +106,6 @@ if error:
     **Please check:**
     1. The 'Model_Files' folder is in the same directory as app.py
     2. All model files are present in Model_Files folder
-    3. File structure:
-       ```
-       Assignment3_Task3/
-       ├── app.py
-       ├── requirements.txt
-       └── Model_Files/
-           ├── adapter_config.json
-           ├── adapter_model.safetensors
-           ├── special_tokens_map.json
-           ├── spiece.model
-           ├── tokenizer
-           └── tokenizer_config.json
-       ```
     """)
     st.stop()
 else:
@@ -192,39 +174,52 @@ with st.sidebar:
     """)
 
 # =============================================================================
+# INITIALIZE SESSION STATE FOR EXAMPLES (FIXED)
+# =============================================================================
+if 'example_text' not in st.session_state:
+    st.session_state.example_text = ""
+
+# =============================================================================
 # MAIN INTERFACE
 # =============================================================================
 st.markdown("---")
 
-# Input text area
-text = st.text_area(
-    "📄 Enter text to summarize:",
-    height=250,
-    placeholder="Paste your article or text here...\n\nThe model works best with news articles, blog posts, and informative content.\n\nMinimum 10 words recommended.",
-    help="Enter or paste the text you want to summarize"
-)
+# Example texts dictionary
+examples = {
+    "Technology News": """Artificial intelligence continues to revolutionize industries worldwide with unprecedented speed. Recent developments in large language models have demonstrated remarkable capabilities in natural language understanding, code generation, and creative tasks. Major technology companies are investing billions of dollars in AI research and development, racing to create more powerful and efficient systems. These AI systems are being deployed across healthcare, education, finance, and transportation sectors. However, experts emphasize the critical importance of responsible AI development, including addressing algorithmic bias, ensuring transparency, and maintaining robust ethical guidelines. Governments and regulatory bodies are working to establish comprehensive frameworks for AI governance. The technology promises to enhance human capabilities while raising important questions about privacy, employment, and societal impact.""",
+    
+    "Health & Fitness": """Regular physical exercise provides numerous health benefits for people of all ages and fitness levels. Scientific studies consistently demonstrate that just 30 minutes of moderate physical activity daily can significantly reduce the risk of cardiovascular disease, type 2 diabetes, and certain types of cancer. Exercise strengthens the cardiovascular system, improves bone density, and enhances muscular strength and flexibility. Beyond physical benefits, regular activity has profound effects on mental health, reducing symptoms of depression and anxiety while improving mood and cognitive function. It also helps maintain healthy body weight, improves sleep quality, and boosts immune system function. Health professionals recommend combining aerobic activities like walking or cycling with strength training exercises and flexibility work for optimal health outcomes. Starting with small, manageable goals and gradually increasing intensity can help establish sustainable exercise habits.""",
+    
+    "Sports News": """The championship game concluded last night with a thrilling victory for the home team in front of a sold-out stadium. After trailing by 15 points at halftime, the team mounted an impressive comeback in the third quarter, displaying remarkable resilience and determination. The star player delivered an outstanding performance, scoring 42 points and grabbing 18 rebounds while providing crucial leadership during critical moments. The atmosphere was electric as fans witnessed one of the most memorable games in franchise history. This victory marks the team's first championship title in over two decades, ending a long drought that had tested the patience of devoted supporters. The coach praised the team's mental toughness and their ability to execute under pressure. Players celebrated emotionally with teammates, coaches, and fans who had supported them throughout the challenging season.""",
+    
+    "Business Article": """The global economy is experiencing significant transformation driven by technological innovation and changing consumer behaviors. Companies are rapidly adapting their business models to meet evolving market demands and remain competitive in an increasingly digital landscape. E-commerce platforms continue to gain market share as consumers embrace online shopping for convenience and variety. Traditional retailers are investing heavily in omnichannel strategies, integrating physical and digital experiences to serve customers effectively. Supply chain disruptions have prompted businesses to diversify their supplier networks and invest in resilient logistics systems. Sustainability has become a central concern, with companies implementing environmentally friendly practices to meet consumer expectations and regulatory requirements. Financial markets remain volatile as investors navigate uncertainty around interest rates, inflation, and geopolitical tensions. Business leaders emphasize the importance of agility and innovation in responding to rapid market changes."""
+}
 
-# Example texts
+# Example selector
 with st.expander("💡 Try an example text"):
     example_choice = st.selectbox(
         "Select an example:",
         ["-- Choose an example --", "Technology News", "Health & Fitness", "Sports News", "Business Article"]
     )
     
-    examples = {
-        "Technology News": """Artificial intelligence continues to revolutionize industries worldwide with unprecedented speed. Recent developments in large language models have demonstrated remarkable capabilities in natural language understanding, code generation, and creative tasks. Major technology companies are investing billions of dollars in AI research and development, racing to create more powerful and efficient systems. These AI systems are being deployed across healthcare, education, finance, and transportation sectors. However, experts emphasize the critical importance of responsible AI development, including addressing algorithmic bias, ensuring transparency, and maintaining robust ethical guidelines. Governments and regulatory bodies are working to establish comprehensive frameworks for AI governance. The technology promises to enhance human capabilities while raising important questions about privacy, employment, and societal impact.""",
-        
-        "Health & Fitness": """Regular physical exercise provides numerous health benefits for people of all ages and fitness levels. Scientific studies consistently demonstrate that just 30 minutes of moderate physical activity daily can significantly reduce the risk of cardiovascular disease, type 2 diabetes, and certain types of cancer. Exercise strengthens the cardiovascular system, improves bone density, and enhances muscular strength and flexibility. Beyond physical benefits, regular activity has profound effects on mental health, reducing symptoms of depression and anxiety while improving mood and cognitive function. It also helps maintain healthy body weight, improves sleep quality, and boosts immune system function. Health professionals recommend combining aerobic activities like walking or cycling with strength training exercises and flexibility work for optimal health outcomes. Starting with small, manageable goals and gradually increasing intensity can help establish sustainable exercise habits.""",
-        
-        "Sports News": """The championship game concluded last night with a thrilling victory for the home team in front of a sold-out stadium. After trailing by 15 points at halftime, the team mounted an impressive comeback in the third quarter, displaying remarkable resilience and determination. The star player delivered an outstanding performance, scoring 42 points and grabbing 18 rebounds while providing crucial leadership during critical moments. The atmosphere was electric as fans witnessed one of the most memorable games in franchise history. This victory marks the team's first championship title in over two decades, ending a long drought that had tested the patience of devoted supporters. The coach praised the team's mental toughness and their ability to execute under pressure. Players celebrated emotionally with teammates, coaches, and fans who had supported them throughout the challenging season.""",
-        
-        "Business Article": """The global economy is experiencing significant transformation driven by technological innovation and changing consumer behaviors. Companies are rapidly adapting their business models to meet evolving market demands and remain competitive in an increasingly digital landscape. E-commerce platforms continue to gain market share as consumers embrace online shopping for convenience and variety. Traditional retailers are investing heavily in omnichannel strategies, integrating physical and digital experiences to serve customers effectively. Supply chain disruptions have prompted businesses to diversify their supplier networks and invest in resilient logistics systems. Sustainability has become a central concern, with companies implementing environmentally friendly practices to meet consumer expectations and regulatory requirements. Financial markets remain volatile as investors navigate uncertainty around interest rates, inflation, and geopolitical tensions. Business leaders emphasize the importance of agility and innovation in responding to rapid market changes."""
-    }
-    
-    if example_choice != "-- Choose an example --" and example_choice in examples:
+    if example_choice != "-- Choose an example --":
         if st.button("📋 Use this example", key="use_example"):
-            text = examples[example_choice]
+            st.session_state.example_text = examples[example_choice]
             st.rerun()
+
+# Input text area (FIXED - uses session state)
+text = st.text_area(
+    "📄 Enter text to summarize:",
+    value=st.session_state.example_text,  # Use session state value
+    height=250,
+    placeholder="Paste your article or text here...\n\nThe model works best with news articles, blog posts, and informative content.\n\nMinimum 10 words recommended.",
+    help="Enter or paste the text you want to summarize",
+    key="text_input"
+)
+
+# Clear example after use
+if text != st.session_state.example_text and st.session_state.example_text != "":
+    st.session_state.example_text = ""
 
 # Generate button
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -272,11 +267,15 @@ if generate_button:
                 st.markdown("---")
                 st.markdown("### 📄 Generated Summary")
                 
-                # Summary in styled box
-                st.markdown(
-                    f'<div class="summary-box">{summary}</div>',
-                    unsafe_allow_html=True
-                )
+                # Check if summary is empty
+                if summary and len(summary.strip()) > 0:
+                    # Summary in styled box (FIXED - now has color)
+                    st.markdown(
+                        f'<div class="summary-box">{summary}</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.error("⚠️ Model generated an empty summary. Please try again with different text.")
                 
                 # Statistics
                 st.markdown("### 📊 Statistics")
@@ -284,7 +283,7 @@ if generate_button:
                 
                 input_words = len(text.split())
                 summary_words = len(summary.split())
-                compression_ratio = round((1 - summary_words / input_words) * 100, 1)
+                compression_ratio = round((1 - summary_words / input_words) * 100, 1) if input_words > 0 else 0
                 
                 with col1:
                     st.metric(
@@ -340,7 +339,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Debug information (optional, hidden by default)
+# Debug information
 if st.sidebar.checkbox("🔧 Show Debug Info", value=False):
     st.sidebar.markdown("---")
     st.sidebar.markdown("**🔍 Debug Information:**")
@@ -353,5 +352,3 @@ if st.sidebar.checkbox("🔧 Show Debug Info", value=False):
     else:
         st.sidebar.write("• ❌ No LoRA adapters detected")
     st.sidebar.write(f"• Adapter path: ./Model_Files")
-
-
